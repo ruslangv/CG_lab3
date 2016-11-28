@@ -1,0 +1,203 @@
+
+<HTML>
+<BODY>
+<p>lab3 | Golov | IU8-51</p>
+<canvas id='lab3' width='1500' height='1000'>
+<script>
+var canvas = document.getElementById('lab3');	
+var ctx = canvas.getContext('2d');
+var parray = [];
+var pcount = 0;
+canvas.addEventListener("click", onClick);
+var Point = function(x, y) 
+{
+	this.x = x;
+	this.y = y;
+}
+// Построение прямой алгоритмом Брезенхема
+function drawLine(x0, y0, x1, y1)
+{
+	function sign(x) 
+	{
+		return (x > 0) ? 1 : (x < 0) ? -1 : 0;
+	};
+	
+	var x, y, dx, dy, incx, incy, pdx, pdy, es, el, error;
+	
+	dx = x1 - x0; 
+	dy = y1 - y0; 	
+	incx = sign(dx);
+	incy = sign(dy);
+	
+	if (dx < 0) dx = Math.abs(dx);
+	
+	if (dy < 0) dy = Math.abs(dy);
+	
+	if(dx > dy) 
+	{
+		pdx = incx; 
+		pdy = 0;
+		es = dy; 
+		el = dx;	
+	}
+	else 
+	{
+		pdx = 0;	
+		pdy = incy;
+		es = dx;
+		el = dy; 
+	}
+	
+	x = x0;
+	y = y0;
+	error = el / 2;
+	ctx.fillRect(x, y, 1, 1);
+	
+	for (t = 0; t < el; t++) 
+	{
+		error -= es;
+		
+		if (error < 0)
+		{
+			error += el;
+			x += incx; 
+			y += incy;
+		}
+		else
+		{
+			x += pdx; 
+			y += pdy; 
+		}
+		
+		ctx.fillRect(x, y, 1, 1);
+	}
+}
+
+// Определяем базисных функций кривой Безье (полиномов Берштейна):
+// i - порядковый номер опорной вершины, n - степень полинома (количество вершин), t - положение кривой (от 0 до 1)
+
+function getBezierBasis(i, n, t) 
+{
+	// считаем факториал
+	function f(n) 
+	{
+		return (n <= 1) ? 1 : n * f(n-1);
+	};
+	
+	// Вычисление i-го элемента полинома Берштейна
+	return (f(n) / (f(i) * f(n-i))) * Math.pow(t, i) * Math.pow(1-t, n-i);
+}
+
+// Определение координат точек кривой Безье:
+// arr - массив опорных точек, step - шаг при расчете кривой равен 0.01,
+// res - массив точек кривой Безье
+
+function getBezierPoints(arr, step) 
+{
+	if (step == undefined) 
+	{
+		step = 0.01;
+	}
+	
+	var res = [];
+	
+	for (var t = 0; t < 1 + step; t += step) 
+	{
+		if (t > 1) 
+		{
+			t = 1;
+		}
+		
+		var ind = res.length;
+		
+		res[ind] = new Point(0, 0);
+		
+		for (var i = 0; i < arr.length; i++) 
+		{
+			var b = getBezierBasis(i, arr.length-1, t);
+			
+			res[ind].x += arr[i].x * b;
+			res[ind].y += arr[i].y * b;
+		}
+	}
+	
+	return res;
+}
+
+// Построение кривой Безье:
+// arr - массив точек кривой Безье, 
+// delay - задержка перед отрисовкой следующей точки, pause - пауза перед началом рисования
+
+function drawBezierLine(arr, delay, pause) 
+{
+	ctx.fillStyle = "red";
+	
+	if (delay == undefined) 
+	{
+		delay = 10;
+	}
+	
+	if (pause == undefined) 
+	{
+		pause = delay;
+	}
+	
+	var i = 0;
+	
+	function delayDraw() 
+	{
+		if (i >= arr.length - 1) 
+		{
+			return;
+		}
+		
+		drawLine(arr[i].x, arr[i].y, arr[i+1].x, arr[i+1].y);
+		
+		i++;
+		
+		setTimeout(delayDraw, delay);
+	};
+	
+	setTimeout(delayDraw, pause);
+}
+	
+	
+function onClick()
+{	
+	ctx.fillStyle = "black";	
+	
+	if (event.which == 1)
+	{			
+		var x = event.offsetX;		
+		var y = event.offsetY;		
+		let p = new Point(x, y);
+		
+		parray.push(p);
+		pcount++;
+		
+		// Построение прямых по опорным точкам
+		if (pcount > 1)
+		{
+			drawLine(parray[pcount-1].x, parray[pcount-1].y, parray[pcount-2].x, parray[pcount-2].y);
+		}		
+	}
+	
+	if (event.which == 2)
+	{			
+		bpoints = getBezierPoints(parray, 0.01);
+		drawBezierLine(bpoints, 10);
+		
+		// Склейка кривых - путь Безье
+		for (i = 0; i < pcount-1; i++)
+		{
+			parray.shift();
+		}
+		
+		pcount = 1
+	}	
+}
+
+</script>
+</canvas>
+</BODY>
+</HTML>
